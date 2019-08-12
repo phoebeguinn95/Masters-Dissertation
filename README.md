@@ -1,9 +1,9 @@
 # Applied Social Data Science Masters Dissertation
 ### Representation of Gender in British Political News: Does a gender bias exist in the portrayal of politicians? Is this affected by policy issue stereotypes?
 
-Articles downloaded from LexisNexis between 01/01/1997 - 01/01/2019. /n
-Downloaded if the articles featured a Labour Cabinet Minister from these years in their headline. /n
-Analysing the texts largely using "quanteda" package in R. /n
+Articles downloaded from LexisNexis between 01/01/1997 - 01/01/2019. \n
+Downloaded if the articles featured a Labour Cabinet Minister from these years in their headline. \n
+Analysing the texts largely using "quanteda" package in R. 
 
 The following repositry consists of four Rmarkdown files along with their html output.
 
