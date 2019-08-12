@@ -1,0 +1,155 @@
+---
+title: "Cleaning data, sorting into dataframe, and assigning topic"
+author: 'Phoebe Guinn'
+date: "22 May 2019"
+output: html_document
+---
+
+###Preparing:
+- Download from Lexis Nexis 
+- Add into data frame with data, newspaper, label mp name and gender
+
+```{r, eval = FALSE}
+library(LexisNexisTools)
+library(quanteda)
+library(stringr)
+library(dplyr)
+
+fem_files <- list.files(pattern = ".txt", 
+                        path = "C:/Users/phoeb/OneDrive/Documents/Capstone/Female Cabinet Articles", 
+                        full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
+fem_names <- str_extract(fem_files, "([^/]+$)") %>%
+  gsub("\\.TXT", "", .)
+
+fem_frame <- data.frame()
+for (i in 1:length(fem_files)) {
+  LNToutput_fem <- lnt_read(x = fem_files[i], extract_paragraphs = FALSE)
+  fem_temp <- data.frame(LNToutput_fem@articles)
+  fem_temp$date <- LNToutput_fem@meta$Date
+  fem_temp$newspaper <- LNToutput_fem@meta$Newspaper
+  fem_temp$mp <- rep(fem_names[i], nrow(fem_temp))
+  fem_frame <- rbind(fem_frame, fem_temp)
+}
+fem_frame$gender <- rep("female", nrow(fem_frame))
+rm(LNToutput_fem, fem_temp, fem_files, fem_names)
+
+male_files <- list.files(pattern = ".txt", 
+                         path = "C:/Users/phoeb/OneDrive/Documents/Capstone/Male Cabinet Articles",
+                         full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
+male_names <- str_extract(male_files, "([^/]+$)") %>%
+  gsub("\\.TXT", "", .)
+
+male_frame <- data.frame()
+for (i in 1:length(male_files)) {
+  LNToutput_male <- lnt_read(x = male_files[i], extract_paragraphs = FALSE)
+  male_temp <- data.frame(LNToutput_male@articles)
+  male_temp$date <- LNToutput_male@meta$Date
+  male_temp$newspaper <- LNToutput_male@meta$Newspaper
+  male_temp$mp <- rep(male_names[i], nrow(male_temp))
+  male_frame <- rbind(male_frame, male_temp)
+}
+male_frame$gender <- rep("male", nrow(male_frame))
+rm(LNToutput_male, male_temp, male_files, male_names)
+
+```
+
+###Sort files into topics: 
+Using Lexicoder Topic Dictionary (Albugh et al., 2013)
+Add  topi/policy issue as column in frame.
+
+```{r, eval = FALSE}
+#Healthcare, Education, Social Welfare, Civil Rights, Macroeconomic, Defence, Foreign Trade, International_affairs
+
+policydict_raw <- scan("topicdict.csv", what = c("character"), sep = "\n", strip.white = F) 
+#find lines with dictionary codes
+grep("cnode", policydict_raw)
+policydict <- dictionary(list(civil_rights = policydict_raw[85:171],
+                              healthcare = policydict_raw[174:299],
+                              education = policydict_raw[302:339], 
+                              social_welfare = policydict_raw[342:405],
+                              macroeconomics = policydict_raw[2:82],
+                              defence = policydict_raw[408:459], 
+                              #foreign_trade = policydict_raw[452:482],
+                              intl_affairs = policydict_raw[495:559],
+                              crime = policydict_raw[562:632]
+                              ))
+rm(policydict_raw)
+
+# combine all articles and set tokens to sets of 1,2 and 3 words (how long entries in dictionary are)
+full_df <- rbind(fem_frame, male_frame)[,-1]
+all_toks <- tokens(full_df$Article, what="word", ngrams=1:3)
+
+#apply topic dictionary
+topicdf <- dfm(all_toks, tolower = T, remove_punct = T) %>%
+  dfm_weight(scheme = "prop") %>%
+  dfm_lookup(dictionary = policydict, valuetype = "glob") %>%
+  convert(to = "data.frame")
+#find max column entry (topic feature count) and set article to this topic 
+z <- max.col(as.matrix(topicdf[,-1]), ties.method = "random")
+full_df$topic <- names(topicdf)[z+1]
+#set to 'None' where no features
+row_sub <- apply(topicdf[,-1], 1, function(row) all(row == 0 ))
+full_df$topic[row_sub] <- 'None'
+```
+
+###Tidy newspaper names and fix one quoting problem
+
+```{r, eval = FALSE}
+
+full_df[20685,1] <- gsub('\\\\', "\\", full_df[20685,1])
+
+
+full_df$newspaper[full_df$newspaper %in% 
+                  c("Daily Mail (London)", "Mail on Sunday (London)", "MAIL ON SUNDAY", "DAILY MAIL (London)",
+                    "MAIL ON SUNDAY (London)", "MailOnline")] <- "The Daily Mail"
+
+full_df$newspaper[full_df$newspaper %in% 
+                  c("Independent Magazine", "Independent on Sunday (London)", "Independent.co.uk",
+                    "The Independent - Daily Edition", "The Independent (London)", "The Independent (United Kingdom)",
+                    "The Independent on Sunday")] <- "The Independent"
+
+full_df$newspaper[full_df$newspaper %in% c("The Observer (London)")] <- "The Observer"
+
+full_df$newspaper[full_df$newspaper %in% 
+                  c("telegraph.co.uk", "The Daily Telegraph (London)", "The Daily Telegraph (LONDON)",
+                    "THE DAILY TELEGRAPH(LONDON)", "The Sunday Telegraph (LONDON)",
+                    "The Sunday Telegraph (London)")] <- "The Telegraph"
+
+full_df$newspaper[full_df$newspaper %in% 
+                  c("The The Sunday Times (London)", "The Times (London)", "The Sunday Times (London)",
+                    "Sunday Times (London)", "Copyright 2004 Times Newspapers Limited")] <- "The Times"
+
+full_df$newspaper[full_df$newspaper %in% c("Daily Mirror", "mirror.co.uk", "Sunday Mirror", "The Mirror")] <- "The Daily Mirror"
+
+full_df$newspaper[full_df$newspaper %in% c("The Sun (England)")] <- "The Sun"
+
+full_df$newspaper[full_df$newspaper %in% 
+                  c("Guardian.com", "Guardian.com.", "The Guardian", "The Guardian - Final Edition",
+                    "The Guardian(London)", "The Guardian (London)", "The Guardian (London) - Final Edition")] <- "The Guardian"
+
+full_df$newspaper[full_df$newspaper %in% c("Daily Star", "Daily Star Sunday")] <- "The Daily Star"
+
+full_df$newspaper[full_df$newspaper %in% c("Express Online", "Sunday Express", "The Express")] <- "The Express"
+
+full_df <- full_df[!full_df$newspaper %in% 
+                     c("Arts & Book Review", "Saturday Magazine", "Sunday Business", "The New Review", "The Observer", "The Daily Star"),]
+
+# These removed so that the many articles talking about football are removed and don't alter results
+full_df <- full_df[!grepl("(c|C)hampionship|(C|c)eltic|(F|f)ootball", full_df$Article),]
+
+```
+
+Write the full frame to file, to be used to subsequent analyses. 
+(eval = F set so doesn't do this every time html output knitted)
+
+```{r, eval = FALSE}
+
+write.table(full_df, file = "articlesdf", append = F)
+
+```
+
+
+Albugh, Q., Sevenans, J. and Soroka, S. (2013). Lexicoder Topic Dictionaries, June 2013 versions, McGill University, Montreal, Canada. (available at lexicoder.com)
+
+
+
