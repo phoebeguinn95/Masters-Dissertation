@@ -322,7 +322,7 @@ full_df &lt;- full_df[!full_df$newspaper %in%
 
 # These removed so that the many articles talking about football are removed and don't alter results
 full_df &lt;- full_df[!grepl(&quot;(c|C)hampionship|(C|c)eltic|(F|f)ootball&quot;, full_df$Article),]</code></pre>
-<p>Write the full frame to file, to be used to subsequent analyses. (eval = F set so doesn’t do this every time html output knitted)</p>
+<p>Write the full frame to file, to be used to subsequent analyses.</p>
 <pre class="r"><code>write.table(full_df, file = &quot;articlesdf&quot;, append = F)</code></pre>
 <p>Albugh, Q., Sevenans, J. and Soroka, S. (2013). Lexicoder Topic Dictionaries, June 2013 versions, McGill University, Montreal, Canada. (available at lexicoder.com)</p>
 </div>

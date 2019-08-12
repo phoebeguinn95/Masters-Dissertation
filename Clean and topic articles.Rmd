@@ -140,7 +140,6 @@ full_df <- full_df[!grepl("(c|C)hampionship|(C|c)eltic|(F|f)ootball", full_df$Ar
 ```
 
 Write the full frame to file, to be used to subsequent analyses. 
-(eval = F set so doesn't do this every time html output knitted)
 
 ```{r, eval = FALSE}
 
