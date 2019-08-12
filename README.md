@@ -11,3 +11,4 @@ The following repositry consists of four Rmarkdown files along with their html o
 2. Summary statistics of data set.
 3. Creaiting and applying dictionaries to the article texts, visualising results through comparative bar charts.
 4. Further analyses involving into text disparities application of multiple linear regression model.
+5. An additional file looking into the intersectionality of gender and class representation. (Data set for this not very big)
