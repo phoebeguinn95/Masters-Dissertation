@@ -16,7 +16,7 @@ library(stringr)
 library(dplyr)
 
 fem_files <- list.files(pattern = ".txt", 
-                        path = "C:/Users/phoeb/OneDrive/Documents/Capstone/Female Cabinet Articles", 
+                        path = "Female Cabinet Articles", 
                         full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
 fem_names <- str_extract(fem_files, "([^/]+$)") %>%
   gsub("\\.TXT", "", .)
@@ -34,7 +34,7 @@ fem_frame$gender <- rep("female", nrow(fem_frame))
 rm(LNToutput_fem, fem_temp, fem_files, fem_names)
 
 male_files <- list.files(pattern = ".txt", 
-                         path = "C:/Users/phoeb/OneDrive/Documents/Capstone/Male Cabinet Articles",
+                         path = "Male Cabinet Articles",
                          full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
 male_names <- str_extract(male_files, "([^/]+$)") %>%
   gsub("\\.TXT", "", .)

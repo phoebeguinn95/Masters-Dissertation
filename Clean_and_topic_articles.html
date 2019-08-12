@@ -209,7 +209,7 @@ library(stringr)
 library(dplyr)
 
 fem_files &lt;- list.files(pattern = &quot;.txt&quot;, 
-                        path = &quot;C:/Users/phoeb/OneDrive/Documents/Capstone/Female Cabinet Articles&quot;, 
+                        path = &quot;Female Cabinet Articles&quot;, 
                         full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
 fem_names &lt;- str_extract(fem_files, &quot;([^/]+$)&quot;) %&gt;%
   gsub(&quot;\\.TXT&quot;, &quot;&quot;, .)
@@ -227,7 +227,7 @@ fem_frame$gender &lt;- rep(&quot;female&quot;, nrow(fem_frame))
 rm(LNToutput_fem, fem_temp, fem_files, fem_names)
 
 male_files &lt;- list.files(pattern = &quot;.txt&quot;, 
-                         path = &quot;C:/Users/phoeb/OneDrive/Documents/Capstone/Male Cabinet Articles&quot;,
+                         path = &quot;Male Cabinet Articles&quot;,
                          full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
 male_names &lt;- str_extract(male_files, &quot;([^/]+$)&quot;) %&gt;%
   gsub(&quot;\\.TXT&quot;, &quot;&quot;, .)
