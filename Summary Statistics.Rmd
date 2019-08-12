@@ -1,0 +1,61 @@
+---
+title: "Summary Statistics"
+author: 'Phoebe Guinn'
+date: "14 June 2019"
+output: html_document
+---
+
+``` {r}
+library(quanteda)
+library(dplyr)
+library(ggplot2)
+
+full_df <- read.table("articlesdf", stringsAsFactors = F)
+```
+
+General Summary Stats:
+
+```{r}
+
+nrow(full_df)
+table(full_df$gender)
+
+as.data.frame(table(full_df[full_df$gender == "female",]$topic))
+as.data.frame(table(full_df[full_df$gender == "male",]$topic))
+
+as.data.frame(table(full_df$newspaper))
+
+#Suggests which MPs might affect results the most
+as.data.frame(table(full_df$mp))[order(as.data.frame(table(full_df$mp))$Freq, decreasing = T),] %>%
+  head(n=20)
+
+```
+
+Looking at number of articles over time:
+
+```{r}
+full_df$date <- as.Date(full_df$date, "%Y-%m-%d")
+
+no_articles <- full_df %>%
+  group_by(gender, year = format(date, "%Y")) %>%
+  tally()
+
+ggplot(no_articles, aes(x=year, y=n, group = gender)) +
+  geom_smooth(aes(color = gender), se=F) +
+  geom_line(aes(color = gender)) +
+  xlab("Year") + ylab("Number of Articles") +
+  labs(color="Gender") +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+```
+
+Readability: (Flesch)
+
+```{r}
+full_corp <- corpus(full_df$Article)
+docvars(full_corp, "gender") <- full_df$gender
+
+#Assess average readability of different gender articles
+mean(textstat_readability(full_corp[docvars(full_corp, "gender") == "female"], measure = "Flesch")$Flesch)
+mean(textstat_readability(full_corp[docvars(full_corp, "gender") == "male"], measure = "Flesch")$Flesch)
+```
+
