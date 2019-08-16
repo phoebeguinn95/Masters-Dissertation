@@ -1,0 +1,162 @@
+---
+title: "More Analyses"
+author: '21600'
+date: "14 June 2019"
+output: html_document
+---
+```{r}
+library(quanteda)
+library(quanteda.dictionaries)
+library(dplyr)
+
+full_df <- read.table("articlesdf", stringsAsFactors = F)
+```
+
+COPYING dictionaries from previous code:
+
+```{r}
+#might need to be removed later
+first_names <- c("Angela", "Ann", "Valerie", "Catherine", "Caroline", "Christina", "Clare", "Diane", "Emily", "Estelle", "Harriet", "Hazel", "Helen", "Hilary", "Jacqui", "Janet", "Jo", "Lesley", "Lucy", "Margaret", "Mo", "Marjorie", "Maria", "Mary", "Meg", "Nia", "Pat", "Patricia", "Rachel", "Rebecca", "Rosie", "Ruth", "Sue", "Tessa", "Yvette", "Alan", "Alistair", "Andrew", "Andy", "Ben", "Bob", "Charles", "Chris", "Chuka", "Dan", "David", "Des", "Donald", "Douglas", "Ed", "Frank", "Geoff", "George", "Hilary", "Ivan", "Ivor", "Jack", "James", "Jim", "John", "Jon", "Liam", "Gareth", "Michael", "Nick", "Owen", "Paul", "Peter", "Robin", "Shaun", "Stephen", "Tom", "Tony", "Tristram", "Vernon", "Gaynor")
+
+#Might need to be removed later
+last_names <- c("Eagle", "Rayner", "McKechin", "Taylor", "Amos", "Ashton", "Flint", "Rees", "Short", "Abbott", "Thornberry", "Morris", "Harman", "Blears", "Liddell", "Armstrong", "Smith", "Royall", "Platt", "Laird", "Powell", "Beckett", "Curran", "Greenwood", "Jay", "Mowlam", "Creagh", "Hillier", "Griffith", "Glass", "Hewitt", "Reeves", "Long-Bailey", "Winterton", "Kelly", "Hayman", "Jowell", "Vaz", "Cooper", "Johnson", "Milburn", "Darling", "Gwynne", "Burnham", "McDonald", "Bradshaw", "Ainsworth", "Clarke", "Leslie", "Umunna", "Carden", "Blunkett", "Clark", "Miliband", "Browne", "Dewar", "Alexander", "Balls", "Dobson", "Hoon", "Robertson", "Benn", "Lewis", "Richard", "Cunningham", "Straw", "Purnell", "Murphy", "Denham", "Healey", "Hutton", "Prescott", "Reid", "Ashworth", "Trickett", "Byrne", "Adonis", "Williams", "Dugher", "Brown", "Boateng", "Flynn", "Dowd", "Hain", "Mandelson", "Cook", "Woodward", "Byers", "Timms", "Twigg", "Watson", "Lloyd", "Hunt", "Coaker", "Harman's", "Thornberry's", "Darling's", "Eagle's", "Harperson")
+
+#list of job titles/cabinet positions (might need to be removed later)
+job_titles <- c("Cabinet", "Minister", "Secretary", "Leader", "House", "Commons", "Lord", "Privy", "Seal", "Lords", "President", "Council", "Office", "Chancellor", "Duchy", "Lancaster", "State", "Social", "Security", "Trade", "Industry", "Business", "Enterprise", "Regulatory", "Reform", "Northern", "Ireland", "Scotland", "International", "Development", "Foreign", "Commonwealth", "Affairs", "Home", "Department", "Work", "ensions", "Health", "Communities", "Local", "Government", "Transport", "Environment", "Food", "Rural", "Culture", "Media", "Sport", "Chief", "Treasury", "Deputy", "Labour", "Party", "Energy", "Climate", "Change", "Whip", "Defence", "Education", "Wales", "Baroness", "Baron", "Lord", "Lady", "Shadow", "Whips", "Chancellor", "Prime")
+
+#General Inquirer
+#might need to be removed later
+personal_titles <- c("DAME", "DR", "MADAME", "MISS", "MRS ", "MS", "MASTER", "MISTER", "MR", "SIR")
+#use following as measure of gender bias
+gendered_words <- c("FEMALE", "FEMININE", "GIRL", "WOMAN", "WOMANLY", "WOMEN", "BOY", "GENTLEMAN", "GUY", "MALE", "MAN ", "MANLY", "MASCULINE", "MEN ")
+relations <- c("AUNT", "BRIDE", "COUSIN", "DAUGHTER", "GRANDMA", "GRANDMOTHER", "GRANNY", "MOTHER", "MUM", "MUMMY", "NIECE", "SISTER", "WIDOW", "WIFE", "BROTHER", "DAD", "DADDY", "FATHER", "GRANDAD", "GRANDFATHER", "GRANDPA", "GROOM", "HUSBAND", "NEPHEW", "SON", "UNCLE")
+
+#Form dictionary
+address_dict <- dictionary(list(fname = first_names, lname = last_names,
+                                jtitle = job_titles, ptitle = personal_titles,
+                                gendered_words = gendered_words, relations = relations))
+
+#ACTIONS
+#HGI dictionary: - Strong, Weak, Active, Passive 
+swapdict_table <- read.csv("~/Capstone/Dictionaries/GI-SWAP.csv",
+                            header = T, fill = T, stringsAsFactors = F, na.strings=c("", "NA"))
+#remove following words from politics dictionary input
+swap_pol <- swapdict_table[,5][!grepl("body|cold|colonial|colony|combat|commissioner|communism|communist|confederate|confederation|congress|congressional|congressman|congressmen|conservatism|conservative|conspiracy|constitution|constitutional|corps|court|courtly|crown|crusade|crusader|delegate|delegation|dictate|dictator|dictatorial|dictatorship|embassy|emperor|empire|enslave|entangle|entanglement|fascist|federal|federation|imperial|imperialist|interstate|invade|iron|junta|jurisdiction|king|kingdom|labor|league|left|legion|lord|loyal|loyalty|mayor|medicare|metropolis|metropolitan|might|ministry|minutemen|power|powerful|precinct|presidency|president|presidential|primary|prince|propaganda|province|queen|radical|rebellious|reds|republic|republican|revolt|revolution|revolutionary|road|royal|royalty|rule|ruler|secede|secession|security|senate|senator|settlement|ship|siege|social|socialism|socialist|sovereign|sovereignty|spokesman|state|statesman|statesmen|surrender|treason|treasonous|tribal|tribe|tyranny|underworld|unimpeachable|usurp|utopia|utopian|vice|villager|war|warlike|white", swapdict_table[,5], ignore.case = T)]
+
+GI_swapdict <- dictionary(list(
+  strong = na.omit(swapdict_table[,1]),
+  weak = na.omit(swapdict_table[,2]),
+  active = na.omit(swapdict_table[,3]),
+  passive = na.omit(swapdict_table[,4]),
+  politics = na.omit(swap_pol)
+  ))
+
+#EMOTIONS/FEELINGS
+#HGI general emotions, and 4 categories from RID (some words removed which didn't tend to capture what was required)
+
+emotFeeldict_table <- read.csv("~/Capstone/Dictionaries/GI-emotFeel.csv",
+                            header = T, fill = T, stringsAsFactors = F, na.strings=c("", "NA"))
+
+emot_feel_dict <- dictionary(list(
+  RID_em_anxiety = data_dictionary_RID$EMOTIONS$ANXIETY, 
+  RID_em_sadness = data_dictionary_RID$EMOTIONS$SADNESS[!grepl("orphan*", data_dictionary_RID$EMOTIONS$SADNESS)],
+  RID_em_affection = data_dictionary_RID$EMOTIONS$AFFECTION[!grepl("marriag*|marri*|bridal*|bride*|fianc*|fraternity*|mating*|romanc*|sweetheart*|wooed*|wooing*|woos",data_dictionary_RID$EMOTIONS$AFFECTION)],
+  RID_em_aggression = data_dictionary_RID$EMOTIONS$AGGRESSION[!grepl("army*|arrow*|assault*|attack*|football*|weapon*|whip*|wars|warrior*|tortur*|shoot*|shot*|injury*|kill*|knif*|gun|gunn*|guns|homicid*|murder*|blade*|bloody*|beaten*|maim*|stab*|strangl*|sword*|war*|ax|axe|axes|bloody*|hit|hits|hitt*|kick*|protest*|rapin*|rip*|ripp*|rips|rob|robb*|robs|seiz*|slander*|slap*|slaughter*|steal*|stol*|stolen*|strik*|violenc*|violent*|wound*|abus*|abusiv*|broken*|brok*|mock*|tyrant*|trachery*|vengeanc*|trampl",data_dictionary_RID$EMOTIONS$AGGRESSION)],
+  GID_em = na.omit(emotFeeldict_table[,1])
+))
+
+
+#APPEARANCE/PERSONALITY/SEXUAL
+#HGI used for personality (adjectives), RID used for body, clothing formed as a mixture of theoretical and empirical reasoning
+appeardict_table <- read.csv("~/Capstone/Dictionaries/personality_apparel.csv",
+                            header = T, fill = T, stringsAsFactors = F, na.strings=c("", "NA"))
+
+# edit apparel key, since tended to capture news story rather than describe politician
+appear_body <- appeardict_table[,3][!grepl("cap?|gown|veil|wetsuit|fedora|helmet|briefs|boot?|vest|uniform?|ring?|skirt|bow|purse|bikini?|heels|pants",appeardict_table[,3])]
+appear_body <- c(appear_body, "boots")
+
+
+appear_person_dict <- dictionary(list(
+  RID_body = gsub("\\*", "\\?", data_dictionary_RID$PRIMARY$REGR_KNOL$NARCISSISM)[!grepl("chin*|arms|hand*|face|blood*|brain*|corps*|facies|heart*|kidney*|liver*|organ*|skull*|vein*|thumb*|bone*|skin*|head*|ribs|heel*|hip|toe|toes|forehead*|flesh*|eye*|cheek*)",data_dictionary_RID$PRIMARY$REGR_KNOL$NARCISSISM )],
+  apparel = na.omit(appear_body),
+  GI_IndAdj = na.omit(appeardict_table[,1][!grepl("HACKNEY", appeardict_table[,1])]),
+  GI_IPAdj = na.omit(appeardict_table[,2])
+))
+
+#remove tables
+rm(emotFeeldict_table, swapdict_table, appeardict_table)
+```
+
+
+Looking at textstat_keyness:
+What features occur disproportionately between genders/ which are key to classifying each?
+
+```{r}
+full_corp <- corpus(full_df[!full_df$topic %in% c("None") & !full_df$mp == "Tessa Jowell",]$Article)
+docvars(full_corp, "gender") <- full_df[!full_df$topic %in% c("None") & !full_df$mp == "Tessa Jowell",]$gender
+
+scored_words <- dfm(full_corp, remove_punct = T, groups = "gender") %>%
+  dfm_remove(address_dict[1:4]) %>%
+  dfm_trim(min_termfreq = 20) %>%
+  dfm_select(dictionary(c(as.list(address_dict[5:6]), as.list(emot_feel_dict[c(1:8)]), as.list(GI_swapdict[3:5]), as.list(appear_person_dict)))) %>%
+  textstat_keyness("female", measure = "chi2")  
+
+head(scored_words$feature, n=250)
+rev(tail(scored_words$feature, n=250))
+```
+
+Creating Multiple Linear Regression Model:
+
+```{r}
+
+grouped_df <- full_df %>%
+  group_by(mp, topic, regs, ed, gender, newspaper) %>%
+  summarise(mean_gen_words = mean(gen_words), mean_gen_roles = mean(gen_roles),
+            mean_sent = mean(sent), mean_aff_sad_anx = mean(aff_sad_anx), mean_agg = mean(agg),
+            mean_emotact = mean(emotact), mean_personality = mean(personality),
+            mean_appear = mean(appearance))
+
+grouped_df <- within(grouped_df, topic <- relevel(as.factor(topic), ref = "healthcare"))
+grouped_df <- within(grouped_df, gender <- relevel(as.factor(gender), ref = "male"))
+grouped_df <- within(grouped_df, newspaper <- relevel(as.factor(newspaper), ref = "The Daily Mail"))
+
+#education and region not included (regs not so important when cabinet ministers. ed also not so much since most quite upper, or forced out of them)
+
+model <- lm(mean_gen_words ~ gender + topic + newspaper + gender*topic, 
+            data = grouped_df[grouped_df$topic != "None",])
+summary(model)
+
+model2 <- lm(mean_gen_roles ~ gender + topic + newspaper + topic*gender, 
+            data = grouped_df[grouped_df$topic != "None",])
+summary(model2)
+
+model3 <- lm(mean_sent ~ gender + topic + newspaper + gender*topic, 
+            data = grouped_df[grouped_df$topic != "None",])
+summary(model3)
+
+model4 <- lm(mean_aff_sad_anx ~ gender + topic + newspaper, 
+            data = grouped_df[grouped_df$topic != "None",])
+summary(model4)
+
+model5 <- lm(mean_agg ~ gender + topic + newspaper, 
+            data = grouped_df[grouped_df$topic != "None",])
+summary(model5)
+
+model6 <- lm(mean_emotact ~ gender + topic + newspaper, 
+            data = grouped_df[grouped_df$topic != "None",])
+summary(model6)
+
+model7 <- lm(mean_personality ~ gender + topic + newspaper, 
+            data = grouped_df[grouped_df$topic != "None",])
+summary(model7)
+
+model8 <- lm(mean_appear ~ gender + topic + newspaper, 
+            data = grouped_df[grouped_df$topic != "None",])
+summary(model8)
+
+
+```
+
+
+
+

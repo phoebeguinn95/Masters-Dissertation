@@ -1,0 +1,411 @@
+---
+title: "Create and apply dictionaries"
+author: 'Phoebe Guinn'
+date: "14 June 2019"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(stringr)
+library(dplyr)
+library(tidyverse)
+library(quanteda)
+library(quanteda.dictionaries)
+
+full_df <- read.table("articlesdf", stringsAsFactors = F)
+```
+
+
+###Cleaning, replacing, removing (or forming dictionary?):
+
+Biases as follows:
+- Gender specific terms: Mills (2002) also identified the use of terms such as 'single mum', 'working mother', 'career woman' and 'unmarried mother' in the media revealing social preconceptions of women. Occupational terms used in relation to women were found to be often premodified by a gender specification such as 'female lawyer' and 'woman judge', identifying their existence as counter to societal expectations (Sigley and Holmes, 2002).
+- Use of girl, focus on gender?
+- Honorific titles
+- Negative portrayal: appearance, sexuality rather than actions, personal information, personality, health
+- Use of stereotypes: agressive businesswoman, emotional, homemaker (family relationships and roles), sexual
+- Narrative structure: Mills (2002) generates a set of questions about a text to ascertain whether a text is gender biased. Are the verbs used concerned with action, with doing, or with reporting feelings or emotions?
+- Sentiment (Lexicoder)
+- Adjectives? As part of personality?
+- The English Regressive Imagery Dictionary (RID),  designed by Martindale (1975, 1990), dictionary keys such as "emotions", "narcissism" contain bags of words typically related to those used in female stereotypes, in particular references to a woman's appearance and simultaneously usage of adjectives suggesting her to be kind and caring but also emotional and angry.
+
+Creating Address Dictionary keys:
+```{r}
+#might need to be removed later
+first_names <- c("Angela", "Ann", "Valerie", "Catherine", "Caroline", "Christina", "Clare", "Diane", "Emily", "Estelle", "Harriet", "Hazel", "Helen", "Hilary", "Jacqui", "Janet", "Jo", "Lesley", "Lucy", "Margaret", "Mo", "Marjorie", "Maria", "Mary", "Meg", "Nia", "Pat", "Patricia", "Rachel", "Rebecca", "Rosie", "Ruth", "Sue", "Tessa", "Yvette", "Alan", "Alistair", "Andrew", "Andy", "Ben", "Bob", "Charles", "Chris", "Chuka", "Dan", "David", "Des", "Donald", "Douglas", "Ed", "Frank", "Geoff", "George", "Hilary", "Ivan", "Ivor", "Jack", "James", "Jim", "John", "Jon", "Liam", "Gareth", "Michael", "Nick", "Owen", "Paul", "Peter", "Robin", "Shaun", "Stephen", "Tom", "Tony", "Tristram", "Vernon", "Gaynor")
+
+#Might need to be removed later
+last_names <- c("Eagle", "Rayner", "McKechin", "Taylor", "Amos", "Ashton", "Flint", "Rees", "Short", "Abbott", "Thornberry", "Morris", "Harman", "Blears", "Liddell", "Armstrong", "Smith", "Royall", "Platt", "Laird", "Powell", "Beckett", "Curran", "Greenwood", "Jay", "Mowlam", "Creagh", "Hillier", "Griffith", "Glass", "Hewitt", "Reeves", "Long-Bailey", "Winterton", "Kelly", "Hayman", "Jowell", "Vaz", "Cooper", "Johnson", "Milburn", "Darling", "Gwynne", "Burnham", "McDonald", "Bradshaw", "Ainsworth", "Clarke", "Leslie", "Umunna", "Carden", "Blunkett", "Clark", "Miliband", "Browne", "Dewar", "Alexander", "Balls", "Dobson", "Hoon", "Robertson", "Benn", "Lewis", "Richard", "Cunningham", "Straw", "Purnell", "Murphy", "Denham", "Healey", "Hutton", "Prescott", "Reid", "Ashworth", "Trickett", "Byrne", "Adonis", "Williams", "Dugher", "Brown", "Boateng", "Flynn", "Dowd", "Hain", "Mandelson", "Cook", "Woodward", "Byers", "Timms", "Twigg", "Watson", "Lloyd", "Hunt", "Coaker", "Harman's", "Thornberry's", "Darling's", "Eagle's", "Harperson")
+
+#list of job titles/cabinet positions (might need to be removed later)
+job_titles <- c("Cabinet", "Minister", "Secretary", "Leader", "House", "Commons", "Lord", "Privy", "Seal", "Lords", "President", "Council", "Office", "Chancellor", "Duchy", "Lancaster", "State", "Social", "Security", "Trade", "Industry", "Business", "Enterprise", "Regulatory", "Reform", "Northern", "Ireland", "Scotland", "International", "Development", "Foreign", "Commonwealth", "Affairs", "Home", "Department", "Work", "ensions", "Health", "Communities", "Local", "Government", "Transport", "Environment", "Food", "Rural", "Culture", "Media", "Sport", "Chief", "Treasury", "Deputy", "Labour", "Party", "Energy", "Climate", "Change", "Whip", "Defence", "Education", "Wales", "Baroness", "Baron", "Lord", "Lady", "Shadow", "Whips", "Chancellor", "Prime")
+
+#General Inquirer
+#might need to be removed later
+personal_titles <- c("DAME", "DR", "MADAME", "MISS", "MRS ", "MS", "MASTER", "MISTER", "MR", "SIR")
+#use following as measure of gender bias
+gendered_words <- c("FEMALE", "FEMININE", "GIRL", "WOMAN", "WOMANLY", "WOMEN", "BOY", "GENTLEMAN", "GUY", "MALE", "MAN ", "MANLY", "MASCULINE", "MEN ")
+relations <- c("AUNT", "BRIDE", "COUSIN", "DAUGHTER", "GRANDMA", "GRANDMOTHER", "GRANNY", "MOTHER", "MUM", "MUMMY", "NIECE", "SISTER", "WIDOW", "WIFE", "BROTHER", "DAD", "DADDY", "FATHER", "GRANDAD", "GRANDFATHER", "GRANDPA", "GROOM", "HUSBAND", "NEPHEW", "SON", "UNCLE")
+
+#Form dictionary
+address_dict <- dictionary(list(fname = first_names, lname = last_names,
+                                jtitle = job_titles, ptitle = personal_titles,
+                                gendered_words = gendered_words, relations = relations))
+
+```
+
+
+###Form other dictionaries
+
+Using Lexicoder Sentiment, Harvard General Inquirer (HGI) and English Regressive Imagery (RID) Dictionary:
+- Sentiment Dictionary
+- Actions/Political Language Dictionary
+- Emotions/Feelings Dictionary
+- Appearance/Personality Dictionary
+(General Inquirer: http://www.wjh.harvard.edu/~inquirer/homecat.htm)
+
+```{r}
+#Lexicoder 
+sentdict <- data_dictionary_LSD2015
+
+#ACTIONS
+#HGI dictionary: - Strong, Weak, Active, Passive 
+swapdict_table <- read.csv("~/Capstone/Dictionaries/GI-SWAP.csv",
+                            header = T, fill = T, stringsAsFactors = F, na.strings=c("", "NA"))
+#remove following words from politics dictionary input
+swap_pol <- swapdict_table[,5][!grepl("body|cold|colonial|colony|combat|commissioner|communism|communist|confederate|confederation|congress|congressional|congressman|congressmen|conservatism|conservative|conspiracy|constitution|constitutional|corps|court|courtly|crown|crusade|crusader|delegate|delegation|dictate|dictator|dictatorial|dictatorship|embassy|emperor|empire|enslave|entangle|entanglement|fascist|federal|federation|imperial|imperialist|interstate|invade|iron|junta|jurisdiction|king|kingdom|labor|league|left|legion|lord|loyal|loyalty|mayor|medicare|metropolis|metropolitan|might|ministry|minutemen|power|powerful|precinct|presidency|president|presidential|primary|prince|propaganda|province|queen|radical|rebellious|reds|republic|republican|revolt|revolution|revolutionary|road|royal|royalty|rule|ruler|secede|secession|security|senate|senator|settlement|ship|siege|social|socialism|socialist|sovereign|sovereignty|spokesman|state|statesman|statesmen|surrender|treason|treasonous|tribal|tribe|tyranny|underworld|unimpeachable|usurp|utopia|utopian|vice|villager|war|warlike|white", swapdict_table[,5], ignore.case = T)]
+
+GI_swapdict <- dictionary(list(
+  strong = na.omit(swapdict_table[,1]),
+  weak = na.omit(swapdict_table[,2]),
+  active = na.omit(swapdict_table[,3]),
+  passive = na.omit(swapdict_table[,4]),
+  politics = na.omit(swap_pol)
+  ))
+
+#EMOTIONS/FEELINGS
+#HGI general emotions, and 4 categories from RID (some words removed which didn't tend to capture what was required)
+
+emotFeeldict_table <- read.csv("~/Capstone/Dictionaries/GI-emotFeel.csv",
+                            header = T, fill = T, stringsAsFactors = F, na.strings=c("", "NA"))
+
+emot_feel_dict <- dictionary(list(
+  RID_em_anxiety = data_dictionary_RID$EMOTIONS$ANXIETY, 
+  RID_em_sadness = data_dictionary_RID$EMOTIONS$SADNESS[!grepl("orphan*", data_dictionary_RID$EMOTIONS$SADNESS)],
+  RID_em_affection = data_dictionary_RID$EMOTIONS$AFFECTION[!grepl("marriag*|marri*|bridal*|bride*|fianc*|fraternity*|mating*|romanc*|sweetheart*|wooed*|wooing*|woos",data_dictionary_RID$EMOTIONS$AFFECTION)],
+  RID_em_aggression = data_dictionary_RID$EMOTIONS$AGGRESSION[!grepl("army*|arrow*|assault*|attack*|football*|weapon*|whip*|wars|warrior*|tortur*|shoot*|shot*|injury*|kill*|knif*|gun|gunn*|guns|homicid*|murder*|blade*|bloody*|beaten*|maim*|stab*|strangl*|sword*|war*|ax|axe|axes|bloody*|hit|hits|hitt*|kick*|protest*|rapin*|rip*|ripp*|rips|rob|robb*|robs|seiz*|slander*|slap*|slaughter*|steal*|stol*|stolen*|strik*|violenc*|violent*|wound*|abus*|abusiv*|broken*|brok*|mock*|tyrant*|trachery*|vengeanc*|trampl",data_dictionary_RID$EMOTIONS$AGGRESSION)],
+  GID_em = na.omit(emotFeeldict_table[,1])
+))
+
+
+#APPEARANCE/PERSONALITY/SEXUAL
+#HGI used for personality (adjectives), RID used for body, clothing formed as a mixture of theoretical and empirical reasoning
+appeardict_table <- read.csv("~/Capstone/Dictionaries/personality_apparel.csv",
+                            header = T, fill = T, stringsAsFactors = F, na.strings=c("", "NA"))
+
+# edit apparel key, since tended to capture news story rather than describe politician
+appear_body <- appeardict_table[,3][!grepl("cap?|gown|veil|wetsuit|fedora|helmet|briefs|boot?|vest|uniform?|ring?|skirt|bow|purse|bikini?|heels|pants",appeardict_table[,3])]
+appear_body <- c(appear_body, "boots")
+
+
+appear_person_dict <- dictionary(list(
+  RID_body = gsub("\\*", "\\?", data_dictionary_RID$PRIMARY$REGR_KNOL$NARCISSISM)[!grepl("chin*|arms|hand*|face|blood*|brain*|corps*|facies|heart*|kidney*|liver*|organ*|skull*|vein*|thumb*|bone*|skin*|head*|ribs|heel*|hip|toe|toes|forehead*|flesh*|eye*|cheek*)",data_dictionary_RID$PRIMARY$REGR_KNOL$NARCISSISM )],
+  apparel = na.omit(appear_body),
+  GI_IndAdj = na.omit(appeardict_table[,1][!grepl("HACKNEY", appeardict_table[,1])]),
+  GI_IPAdj = na.omit(appeardict_table[,2])
+))
+
+#remove tables
+rm(emotFeeldict_table, swapdict_table, appeardict_table)
+```
+
+
+Apply dictionaries to full corpus, grouped by gender and topic:
+
+```{r}
+#create corpus
+full_corp <- corpus(full_df$Article)
+docvars(full_corp, "gender") <- full_df$gender
+docvars(full_corp, "topic") <- full_df$topic
+#create dfm, grouped by topic and gender
+full_dfm <- dfm(full_corp, groups = c("gender", "topic"), tolower = T, remove_punct = T, 
+                remove = c(stopwords("english"), "GETTY", first_names, last_names)) %>%
+  dfm_trim(min_termfreq = 10) %>%
+  dfm_weight(scheme = "prop")
+
+#NB. job_titles, personal_titles, first_names and last_names removed first just in case any of the other dictionaries contained words/polysemes that coincided items in these keys.
+
+sentiment <- dfm_remove(full_dfm, c(job_titles, personal_titles)) %>%
+  dfm_lookup(dictionary = sentdict, valuetype = "glob")
+
+address <- dfm_lookup(full_dfm, dictionary = address_dict, valuetype = "glob")
+
+swap <- dfm_remove(full_dfm, c(job_titles, personal_titles)) %>%
+  dfm_lookup(dictionary = GI_swapdict, valuetype = "glob")
+
+emotions <- dfm_remove(full_dfm, c(job_titles, personal_titles)) %>%
+  dfm_lookup(dictionary = emot_feel_dict, valuetype = "glob")
+
+#join emotions and actions, so can later measure emotionality versus action-based lexicon
+emotact <- dfm_remove(full_dfm, c(job_titles, personal_titles)) %>%
+  dfm_lookup(dictionary = dictionary(c(as.list(emot_feel_dict), as.list(GI_swapdict))),
+             valuetype = "glob") 
+#emotions-actions
+emotact_sum <- as.data.frame(rowSums(emotact[,1:5])-rowSums(emotact[,c(8:10)]))
+
+appearance <- dfm_remove(full_dfm, c(job_titles, personal_titles)) %>%
+  dfm_lookup(dictionary = appear_person_dict, valuetype = "glob")
+
+
+```
+
+
+Plotting graphs: 
+
+```{r}
+#---------------Address---------------------------------------------------------------
+#Good results for gendered_words, relations and personal_titles
+#Address Score (gendered words and relations)
+#ptitle: follows expected pattern apart from crime (perhaps because many stories by mostly male perpetrators)
+address_for_graph <- convert(address, to = "data.frame")
+address_for_graph$gender <- str_extract(address_for_graph$document, "(.*)\\.") %>%
+  gsub("\\.", "", .)
+address_for_graph$topic <- str_extract(address_for_graph$document, "\\.(.*)") %>%
+  gsub("\\.", "", .)
+
+#Graphs
+address_for_graph %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(fill = gender, y=(gendered_words)*100, x = topic)) +
+  geom_bar(position="dodge", stat="identity") +
+  ggtitle("Gender-Specific Words by Gender and Topic") +
+  labs(fill="Gender") +
+  ylab("Score(*100)") + xlab("Topic") +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  scale_x_discrete(labels=c("Civil Rights","Social Welfare","Education","Healthcare","Macroeconomics",
+                            "International Affairs","Defence","Crime","None"))
+
+address_for_graph %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(fill = gender, y=(relations)*100, x = topic)) +
+  geom_bar(position="dodge", stat="identity") +
+  ggtitle("Gendered Role Mentions by Gender and Topic") +
+  labs(fill="Gender") +
+  ylab("Score(*100)") + xlab("Topic") +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  scale_x_discrete(labels=c("Civil Rights","Social Welfare","Education","Healthcare","Macroeconomics",
+                            "International Affairs","Defence","Crime","None"))
+
+#-----------Sentiment--------------------------------------------------------------------------------
+#Sentiment Score
+sent_for_graph <- convert(sentiment, to = "data.frame")
+sent_for_graph$gender <- str_extract(sent_for_graph$document, "(.*)\\.") %>%
+  gsub("\\.", "", .)
+sent_for_graph$topic <- str_extract(sent_for_graph$document, "\\.(.*)") %>%
+  gsub("\\.", "", .)
+
+#Differences (Male - Female)
+sent_for_graph2 <-  as.matrix(filter(sent_for_graph, gender == "male")[,-c(1,6,7)]) - 
+  as.matrix(filter(sent_for_graph, gender == "female")[,-c(1,6,7)]) %>%
+  as.data.frame() 
+sent_for_graph2$topic <- c("civil_rights", "crime", "defence", "education",
+                           "healthcare", "intl_affairs", "macroeconomics", "None", "social_welfare")
+
+#Graph for seperate sentiment
+sent_for_graph %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(fill= gender, y= ((positive-negative)*100) + 2, x = topic)) + 
+  geom_bar(position="dodge", stat="identity") +
+  ggtitle("Sentiment Scoring by Gender and Topic") +
+  ylab("Sentiment Score(*100)+2") + xlab("Topic") + labs(subtitle  = "Graph 5.") +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+#Differences graph
+sent_for_graph2 %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(y = ((positive-negative)*100), x = topic)) +
+  geom_bar(position="dodge", stat="identity") +
+  ylab("Score(*100) (Male-Female)") + xlab("Topic") +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  scale_x_discrete(labels=c("Civil Rights","Social Welfare","Education","Healthcare","Macroeconomics",
+                            "International Affairs","Defence","Crime","None"))
+
+#-----------Strong/Weak-------------------------------------------------------------------------
+#Decided not to use strong/active vs weak/passive measure since the items in the dictionaries were varied and nearly all of them were not in reference to the politician, but were in relation to the news story.
+#cannon interesting one, in the "strong" category, but used mostly as "loose cannon"
+
+#-------------Emotions/Feelings-----------------------------------------------------------------
+#Emotions Score 
+emot_for_graph <- convert(emotions, to = "data.frame")
+emot_for_graph$gender <- str_extract(emot_for_graph$document, "(.*)\\.") %>%
+  gsub("\\.", "", .)
+emot_for_graph$topic <- str_extract(emot_for_graph$document, "\\.(.*)") %>%
+  gsub("\\.", "", .)
+
+#Graph for separate actions
+emot_for_graph %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(fill = gender, y= (RID_em_aggression)*100, x = topic)) +
+  geom_bar(position="dodge", stat="identity") +
+  ggtitle("Aggression Scoring by Gender and Topic") +
+  labs(fill="Gender") +
+  ylab("Score(*100)") + xlab("Topic") +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  scale_x_discrete(labels=c("Civil Rights","Social Welfare","Education","Healthcare","Macroeconomics",
+                            "International Affairs","Defence","Crime","None"))
+
+emot_for_graph %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(fill = gender, y= (RID_em_anxiety+RID_em_sadness+RID_em_affection)*100, x = topic)) + 
+  geom_bar(position="dodge", stat="identity") +
+  ggtitle("Affection, Sadness and Anxiety Scoring by Gender and Topic") +
+  labs(fill="Gender") +
+  ylab("Score(*100)") + xlab("Topic") +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  scale_x_discrete(labels=c("Civil Rights","Social Welfare","Education","Healthcare","Macroeconomics",
+                            "International Affairs","Defence","Crime","None"))
+
+#-------------Emotions--VS--Actions--------------------------------------------------------------
+#emotion-actions
+#females always more. Not much correlation with stereotyped gendered topics 
+emotact_sum$gender <- str_extract(rownames(emotact_sum), "(.*)\\.") %>%
+  gsub("\\.", "", .)
+emotact_sum$topic <- str_extract(rownames(emotact_sum), "\\.(.*)") %>%
+  gsub("\\.", "", .)
+colnames(emotact_sum)[1] <- "total_score"
+
+emotact_sum2 <- as.matrix(filter(emotact_sum, gender == "female")[,-(2:3)]) - 
+  as.matrix(filter(emotact_sum, gender == "male")[,-(2:3)]) %>%
+  as.data.frame() 
+emotact_sum2$topic <- c("civil_rights", "crime", "defence", "education",
+                           "healthcare", "intl_affairs", "macroeconomics", "None", "social_welfare")
+
+emotact_sum %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(fill = gender, y = total_score*100, x = topic)) + 
+  geom_bar(position="dodge", stat="identity") +
+  ggtitle("Emotionality over Actions Scoring by Gender and Topic") +
+  ylab("Emotions-Actions Score(*100)") + xlab("Topic") + labs(subtitle  = "Graph 2.") +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+emotact_sum2 %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(y = V1*100, x = topic)) + 
+  geom_bar(position="dodge", stat="identity") +
+  ylab("Score(*100) (Female-Male)") + xlab("Topic") +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  scale_x_discrete(labels=c("Civil Rights","Social Welfare","Education","Healthcare","Macroeconomics",
+                            "International Affairs","Defence","Crime","None"))
+
+
+#-----------Appearance/Personality---------------------------------------------------------
+#Mixed results: often men actually score more (ignore body parts for healthcare because they included a lot in article)
+#Maybe because already know this is bad? More aware?
+#Personality measures had similar problems to strong/weak dictionaries
+#Appearance/personality Score 
+appear_for_graph <- convert(appearance, to = "data.frame")
+appear_for_graph$gender <- str_extract(appear_for_graph$document, "(.*)\\.") %>%
+  gsub("\\.", "", .)
+appear_for_graph$topic <- str_extract(appear_for_graph$document, "\\.(.*)") %>%
+  gsub("\\.", "", .)
+
+#Graph for separate gender
+appear_for_graph %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(fill= gender, y= (GI_IndAdj + GI_IPAdj)*100, x = topic)) + 
+  geom_bar(position="dodge", stat="identity") +
+  ggtitle("Personality Mentions by Gender and Topic") +
+  labs(fill="Gender") +
+  ylab("Score (*100)") + xlab("Topic") + labs(subtitle  = "Graph 4.") +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  scale_x_discrete(labels=c("Civil Rights","Social Welfare","Education","Healthcare","Macroeconomics",
+                            "International Affairs","Defence","Crime","None"))
+
+appear_for_graph %>%
+  mutate(topic = fct_relevel(topic, "civil_rights", "social_welfare", "education", "healthcare",
+                             "macroeconomics", "intl_affairs", "defence", "crime", "None")) %>%
+  ggplot(aes(fill= gender, y= (apparel+RID_body)*100, x = topic)) + 
+  geom_bar(position="dodge", stat="identity") +
+  ggtitle("Appearance Mentions with Articles Grouped by Topic") +
+  ylab("Score(*100)") + xlab("Topic") + labs(subtitle  = "Graph 5.") +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+```
+
+Looking into what emotions occur disproportionately for men and women: in civil_rights vs other "feminine topics". Also for women in defence and international affairs
+
+```{r}
+
+dfm(full_corp, remove_punct = T) %>%
+  dfm_subset(topic == "civil_rights") %>%
+  dfm_group("gender") %>%
+  dfm_trim(min_termfreq = 10) %>%
+  dfm_remove(address_dict[1:4]) %>%
+  dfm_select(emot_feel_dict) %>%  
+  textstat_keyness("female", measure = "chi2") %>%
+  textplot_keyness(n=20)
+
+dfm(full_corp, remove_punct = T) %>%
+  dfm_subset(topic %in% c("social_welfare", "education", "healthcare")) %>%
+  dfm_group("gender") %>%
+  dfm_trim(min_termfreq = 10) %>%
+  dfm_remove(address_dict[1:4]) %>%
+  dfm_select(emot_feel_dict) %>%  
+  textstat_keyness("female", measure = "chi2") %>%
+  textplot_keyness(n=20)
+
+dfm(full_corp, remove_punct = T) %>%
+  dfm_subset(topic %in% c("intl_affairs", "defence")) %>%
+  dfm_group("gender") %>%
+  dfm_trim(min_termfreq = 10) %>%
+  dfm_remove(address_dict[1:4]) %>%
+  dfm_select(emot_feel_dict) %>%  
+  textstat_keyness("female", measure = "chi2") %>%
+  textplot_keyness(n=20)
+
+```
+
+
+### Add individual values to dataframe for each article
+
+```{r, eval = FALSE}
+
+article_dfm <- dfm(full_corp, tolower = T, remove = c(stopwords("english"), "GETTY")) %>%
+  dfm_weight(scheme = "prop")
+
+address2 <- dfm_lookup(article_dfm, dictionary = address_dict, valuetype = "fixed")
+swap2 <- dfm_lookup(article_dfm, dictionary = GI_swapdict, valuetype = "fixed")
+sent2 <- dfm_lookup(article_dfm, dictionary = sentdict, valuetype = "glob")
+emot2 <- dfm_lookup(article_dfm, dictionary = emot_feel_dict, valuetype = "glob")
+emotact2 <- dfm_lookup(article_dfm, dictionary = dictionary(c(as.list(emot_feel_dict), as.list(GI_swapdict))),
+                       valuetype = "glob")
+appear_person2 <- dfm_lookup(article_dfm, dictionary = appear_person_dict, valuetype = "glob")
+
+
+full_df$gen_words <- as.numeric(address2[,5]) 
+full_df$gen_roles <- as.numeric(address2[,6])
+full_df$sent <- as.numeric(sent2[,2]) - as.numeric(sent2[,1])
+full_df$aff_sad_anx <- as.numeric(emot2[,2]) + as.numeric(emot2[,3]) + as.numeric(emot2[,4])
+full_df$agg <-  as.numeric(emot2[,5])
+full_df$emotact <- as.numeric(rowSums(emotact2[,1:5])) - as.numeric(rowSums(emotact2[,c(8:10)]))
+full_df$personality <- as.numeric(appear_person2[,3]) + as.numeric(appear_person2[,4])
+full_df$appearance <- as.numeric(appear_person2[,1]) + as.numeric(appear_person2[,2])
+
+```
+
+Write metrics to file on article frame, to be used for further analyses:
+
+```{r, eval = FALSE}
+write.table(full_df, file = "articlesdf", append = F)
+```
+
