@@ -1,0 +1,151 @@
+---
+title: "Investigating Class docs"
+author: 'Phoebe Guinn'
+date: "1 July 2019"
+output: html_document
+---
+
+##Language and Intersectionality of Gender and Class
+
+###Loading Into Dataframe
+
+```{r}
+library(LexisNexisTools)
+library(quanteda)
+library(stringr)
+library(ggplot2)
+
+file_names <- list.files(pattern = ".txt", 
+                        path = "~/Capstone/Extreme Class Articles", 
+                        full.names = TRUE, recursive = TRUE, ignore.case = TRUE) %>%
+  append(list.files(pattern = "Angela Rayner|Rebecca Long-Bailey|Margaret Jay|Tessa Jowell", 
+                    path = "~/Capstone/Female Cabinet Articles", 
+                    full.names = TRUE, recursive = TRUE, ignore.case = TRUE)) %>%
+  append(list.files(pattern = "Alan Johnson|Bob Ainsworth|Tristram Hunt|Hilary Benn|Chuka Umunna", 
+                    path = "~/Capstone/Male Cabinet Articles", 
+                    full.names = TRUE, recursive = TRUE, ignore.case = TRUE))
+
+mp_names <- str_extract(file_names, "([^/]+$)") %>%
+  gsub("\\.TXT", "", .)
+
+mp_class <- c("wc", "wc", "uc", "wc", "wc", "uc", "wc", "wc", "uc",
+              "wc", "uc", "wc", "wc", "uc", "uc", "uc")
+
+
+class_frame <- data.frame()
+for (i in 1:length(file_names)) {
+  LNToutput <- lnt_read(x = file_names[i], extract_paragraphs = FALSE, verbose = F)
+  temp <- data.frame(LNToutput@articles)
+  temp$mp <- rep(mp_names[i], nrow(temp))
+  temp$class <- rep(mp_class[i], nrow(temp))
+  class_frame <- rbind(class_frame, temp)
+}
+
+table(class_frame$class)
+table(class_frame$mp)
+```
+
+###Finding Key Features
+
+-Just keep features within wc dictionary: HGI 
+-Following keys decided through literature review
+Virtue: 719 words indicating an assessment of moral approval or good fortune, especially from the perspective of middle-class society
+Vice: 685 words indicating an assessment of moral disapproval or misfortune
+Means: 244 words denoting objects, acts or methods utilized in attaining goals
+Need: 76 words related to the expression of need or intent
+Persist: 64 words indicating "stick to it" and endurance
+IPAdj: 117 adjectives referring to relations between people, such as "unkind, aloof, supportive"
+IndAdj: 637 adjectives describing people apart from their relations to one another, such as "thrifty, restless"
+Ought: 26 words indicating moral imperative
+SklOth: 158 other skill-related words
+RcEthic: Ethics, 151 words of values concerning the social order
+RspTot: Respect is the valuing of status, honor, recognition and prestige
+And, https://www.macmillandictionary.com/thesaurus-category/british/social-class-and-attitudes-to-class
+
+```{r}
+
+classdict_table <- read.csv("~/Capstone/Dictionaries/GI-ClassPotential.csv",
+                            header = T, fill = T, stringsAsFactors = F, blank.lines.skip = T)
+
+classdict <- dictionary(list(
+  virtue = classdict_table[,1],
+  vice = classdict_table[,2],
+  need = classdict_table[,3],
+  means = classdict_table[,4],
+  persist = classdict_table[,5],
+  ought = classdict_table[,6],
+  InterPersAdj = classdict_table[,7],
+  IndAdj = classdict_table[,8],
+  ethics = classdict_table[,9],
+  respect = classdict_table[,10],
+  skills = classdict_table[,11],
+  class_rel = classdict_table[,12]
+))
+
+#form into corpus
+class_corp <- corpus(class_frame$Article)
+docvars(class_corp, "class") <- class_frame$class
+docvars(class_corp, "mp") <- class_frame$mp
+
+#use following dfm to apply to textstat_keyness() and kwic() to decide which keys to keep in dictionary
+class_dict_res <- dfm(class_corp, groups = "class", remove = stopwords("english"), dictionary = classdict[-c(7,8)]) %>%
+  dfm_weight(scheme = "prop")
+dfm(class_corp, remove_punct = T, remove = stopwords("english")) %>%
+  dfm_select(classdict[c(6:8,12)]) %>%
+  dfm_group(groups = "class") %>%
+  textstat_keyness("wc", measure = "chi2") %>%
+  textplot_keyness(n=20)
+#estate referring to place growing up, especially for members such as David Lammy, Angela Rayner
+
+#not using need (interest, hope) since this might refer more to how the person presents themself rather than being presented. Or maybe not taken seriously when talking of what country needs, focus on other things. Such as results from 7,8,12: class, background, estate. Not means, no difference. Persist doesnt give much information. Neither does skills. 
+#Ethics, interesting but leads to just all the bad things each side do. 
+#keep vice, virtue, adjs, class, respect (interesting)
+```
+
+###Using Wordscores to map word usage / types of words used for each gender/class
+
+```{r}
+#make shorter gender address dictionary 
+gendered_words <- c("FEMALE", "FEMININE", "GIRL", "WOMAN", "WOMANLY", "WOMEN", "BOY", "GENTLEMAN", "GUY", "MALE", "MAN ", "MANLY", "MASCULINE", "MEN ")
+relations <- c("AUNT", "BRIDE", "COUSIN", "DAUGHTER", "GRANDMA", "GRANDMOTHER", "GRANNY", "MOTHER", "MUM", "MUMMY", "NIECE", "SISTER", "WIDOW", "WIFE", "BROTHER", "DAD", "DADDY", "FATHER", "GRANDAD", "GRANDFATHER", "GRANDPA", "GROOM", "HUSBAND", "NEPHEW", "SON", "UNCLE")
+address_dict2 <- dictionary(list(gendered_words = gendered_words, relations = relations))
+
+#make whole dictionary
+comb_dict <- dictionary(c(as.list(classdict[c(6:8,12)]), as.list(address_dict2)))
+#make dfm for each mp
+#1 = wc, men, 2 = uc, fem   
+class_dfm <- dfm(class_corp, select = comb_dict, groups = "mp") %>%
+  dfm_trim(min_termfreq = 5)
+docvars(class_dfm, "class") <- c(1,1,1,2,1,1,2,2,1,1,2,2,1,1,2,2)
+docvars(class_dfm, "gender") <- c(1,2,1,1,1,1,2,1,2,2,2,2,2,1,2,1)
+                             
+#apply wordscores
+ws_c <- textmodel_wordscores(class_dfm, docvars(class_dfm, "class") , smooth=.5)
+ws_g <- textmodel_wordscores(class_dfm, docvars(class_dfm, "gender") , smooth=.5)
+
+#put wordscores into df which will then be plotted
+plot_words <- as.data.frame(coef(ws_c))
+plot_words$gender_score <- coef(ws_g)
+colnames(plot_words)[1] <- "class_score"
+
+#highlight which words most interesting in plot
+specific_words <- grepl("feminine|masculine|hardy|daring|unruly|accent|abrasive|rotten|immature|voluntary|charitable|rich|humanitarian|inspirational|husband|wife|mother|father|grandmother|manly|woman|man", rownames(plot_words))
+
+plot_words %>%
+  ggplot(aes(x = class_score, y = gender_score)) +
+  geom_text(data = plot_words[!specific_words,], label=rownames(plot_words[!specific_words,]), colour = "darkgrey") +
+  geom_text(data = plot_words[specific_words,], label=rownames(plot_words[specific_words,]), colour = "black")
+
+# let's look at the most discriminant word
+sw <- sort(coef(ws_c))
+names(head(sw, n=60))
+tail(sw, n=60)
+
+```
+
+Not good/reliable at rescoring/predicting other politicians (presumably because either training data too small, or that most cabinet ministers are of the same class)
+
+
+
+
+
