@@ -60,7 +60,7 @@ Add  topi/policy issue as column in frame.
 ```{r, eval = FALSE}
 #Healthcare, Education, Social Welfare, Civil Rights, Macroeconomic, Defence, Foreign Trade, International_affairs
 
-policydict_raw <- scan("topicdict.csv", what = c("character"), sep = "\n", strip.white = F) 
+policydict_raw <- scan("~/Capstone/Dictionaries/topicdict.csv", what = c("character"), sep = "\n", strip.white = F) 
 #find lines with dictionary codes
 grep("cnode", policydict_raw)
 policydict <- dictionary(list(civil_rights = policydict_raw[85:171],

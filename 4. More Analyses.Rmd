@@ -1,6 +1,6 @@
 ---
 title: "More Analyses"
-author: '21600'
+author: 'Phoebe Guinn'
 date: "14 June 2019"
 output: html_document
 ---
